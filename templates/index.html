@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REC — Sistema Híbrido de Asistencia Biométrica</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Lucide Icons (SVG replacement) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        :root {
+            --bg: #0d0d14;
+            --surface: #12121e;
+            --surface-hover: #1a1a2e;
+            --border: #1e1e35;
+            --border-hover: #2d2d4d;
+            --accent: #6d28d9;
+            --accent-hover: #7c3aed;
+            --accent-soft: rgba(109, 40, 217, 0.15);
+            --text: #e2e8f0;
+            --muted: #6b7280;
+            --green: #22c55e;
+            --green-bg: rgba(34, 197, 94, 0.15);
+            --yellow: #f59e0b;
+            --yellow-bg: rgba(245, 158, 11, 0.15);
+            --red: #ef4444;
+            --red-bg: rgba(239, 68, 68, 0.15);
+            --blue: #3b82f6;
+            --blue-bg: rgba(59, 130, 246, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(109, 40, 217, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.05) 0px, transparent 50%);
+        }
+
+        /* Top Bar */
+        .topbar {
+            height: 70px;
+            background-color: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-badge {
+            background-color: var(--accent);
+            color: white;
+            font-weight: 800;
+            font-size: 14px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 12px rgba(109, 40, 217, 0.3);
+        }
+
+        .logo-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .logo-subtitle {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: -2px;
+        }
+
+        .session-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: var(--red);
+            transition: all 0.3s ease;
+        }
+
+        .session-status.active {
+            background-color: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            color: var(--green);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: currentColor;
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        /* Main Container */
+        .main-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 7fr 5fr;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1600px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Left Column - Camera Card */
+        .camera-card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge-container {
+            display: flex;
+            gap: 8px;
+        }
+
+        .badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .badge-facial {
+            background-color: var(--blue-bg);
+            color: var(--blue);
+        }
+
+        .badge-qr {
+            background-color: var(--green-bg);
+            color: var(--green);
+        }
+
+        .camera-viewport {
+            flex: 1;
+            background-color: #08080f;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+        }
+
+        #camera-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Espejar cámara */
+            display: none;
+        }
+
+        #camera-canvas {
+            display: none;
+        }
+
+        .camera-placeholder {
+            text-align: center;
+            color: var(--muted);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .camera-placeholder p {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* Scanner line animation */
+        .scanner-overlay {
+            position: absolute;
+            inset: 16px;
+            border: 2px solid transparent;
+            pointer-events: none;
+            display: none;
+        }
+
+        .camera-viewport.active .scanner-overlay {
+            display: block;
+        }
+
+        .scanner-corner {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-color: var(--accent);
+            border-style: solid;
+            border-width: 0;
+        }
+
+        .corner-tl { top: 0; left: 0; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 8px; }
+        .corner-tr { top: 0; right: 0; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 8px; }
+        .corner-bl { bottom: 0; left: 0; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 8px; }
+        .corner-br { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 8px; }
+
+        .scan-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            box-shadow: 0 0 10px var(--accent);
+            top: 0;
+            animation: scanning 3s linear infinite;
+        }
+
+        @keyframes scanning {
+            0% { top: 0%; }
+            50% { top: 100%; }
+            100% { top: 0%; }
+        }
+
+        /* Banner de Estado */
+        .status-banner {
+            padding: 16px;
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--red);
+            border-color: var(--red);
+            transition: all 0.3s ease;
+        }
+
+        .status-banner.active {
+            color: var(--green);
+            border-color: var(--green);
+        }
+
+        .status-banner.unknown {
+            color: var(--yellow);
+            border-color: var(--yellow);
+        }
+
+        /* Right Column - Controls & Metrics */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .config-card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .select-input, .text-input {
+            width: 100%;
+            background-color: var(--surface-hover);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            padding: 10px 14px;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .select-input:focus, .text-input:focus {
+            border-color: var(--accent);
+        }
+
+        .grid-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn-control {
+            width: 100%;
+            background-color: var(--green);
+            color: #000;
+            border: none;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-control:hover {
+            transform: translateY(-1px);
+            opacity: 0.9;
+        }
+
+        .btn-control.active {
+            background-color: var(--red);
+            color: white;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .metric-box {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .metric-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-box.present { border-color: rgba(34, 197, 94, 0.2); }
+        .metric-box.present .metric-value { color: var(--green); }
+        .metric-box.late { border-color: rgba(245, 158, 11, 0.2); }
+        .metric-box.late .metric-value { color: var(--yellow); }
+        .metric-box.absent { border-color: rgba(239, 68, 68, 0.2); }
+        .metric-box.absent .metric-value { color: var(--red); }
+
+        /* Attendance List */
+        .list-card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            min-height: 250px;
+        }
+
+        .table-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 16px;
+        }
+
+        .table-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table-row:last-child {
+            border-bottom: none;
+        }
+
+        .student-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 11px;
+        }
+
+        .avatar.present { background-color: var(--green-bg); color: var(--green); }
+        .avatar.late { background-color: var(--yellow-bg); color: var(--yellow); }
+        .avatar.absent { background-color: var(--red-bg); color: var(--red); }
+
+        .student-details .name {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .student-details .id-code {
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .badge-status {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .badge-status.present { background-color: var(--green-bg); color: var(--green); }
+        .badge-status.late { background-color: var(--yellow-bg); color: var(--yellow); }
+        .badge-status.absent { background-color: var(--red-bg); color: var(--red); }
+
+        .time-method {
+            text-align: right;
+        }
+
+        .time-method .time {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .time-method .method {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        /* Console Log */
+        .console-card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 14px;
+            height: 120px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .console-output {
+            flex: 1;
+            background-color: #09090f;
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: #687089;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--border-hover);
+        }
+
+        /* Navbar links styling */
+        .nav-links {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 13.5px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--text);
+            background-color: var(--surface-hover);
+        }
+
+        .nav-link.active {
+            color: white;
+            background-color: var(--accent);
+            box-shadow: 0 4px 12px rgba(109, 40, 217, 0.25);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation Bar -->
+    <div class="topbar">
+        <div class="logo-section">
+            <span class="logo-badge">REC</span>
+            <div>
+                <h1 class="logo-title">Asistencia Híbrida</h1>
+                <p class="logo-subtitle">Sistema Web de Reconocimiento Facial y Lector QR</p>
+            </div>
+        </div>
+        
+        <nav class="nav-links">
+            <a href="/" class="nav-link active"><i data-lucide="layout-dashboard" style="width: 16px; height: 16px;"></i> Asistencia</a>
+            <a href="/enroll" class="nav-link"><i data-lucide="user-plus" style="width: 16px; height: 16px;"></i> Enrolar Alumno</a>
+            <a href="/student" class="nav-link"><i data-lucide="qr-code" style="width: 16px; height: 16px;"></i> App Alumno (QR)</a>
+        </nav>
+
+        <div class="session-status" id="session-status-badge">
+            <span class="status-dot"></span>
+            <span id="session-status-text">SESIÓN CERRADA</span>
+        </div>
+    </div>
+
+    <!-- Main Workspace Container -->
+    <div class="main-container">
+        
+        <!-- Left Column: Video & Camera Status -->
+        <div>
+            <div class="camera-card">
+                <div class="card-header">
+                    <span class="card-title">
+                        <i data-lucide="video" style="width: 16px; height: 16px;"></i>
+                        Cámara del Docente
+                    </span>
+                    <div class="badge-container">
+                        <span class="badge badge-facial">● Facial</span>
+                        <span class="badge badge-qr">▣ QR</span>
+                    </div>
+                </div>
+                <div class="camera-viewport" id="viewport-container">
+                    <video id="camera-video" autoplay playsinline></video>
+                    <canvas id="camera-canvas"></canvas>
+                    <div class="scanner-overlay">
+                        <div class="scanner-corner corner-tl"></div>
+                        <div class="scanner-corner corner-tr"></div>
+                        <div class="scanner-corner corner-bl"></div>
+                        <div class="scanner-corner corner-br"></div>
+                        <div class="scan-line"></div>
+                    </div>
+                    <div class="camera-placeholder" id="placeholder-box">
+                        <i data-lucide="video-off" style="width: 48px; height: 48px; stroke-width: 1.5;"></i>
+                        <p>Inicie la clase para activar la cámara web</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="status-banner" id="banner-estado">
+                <i data-lucide="info" style="width: 18px; height: 18px;"></i>
+                <span id="banner-texto">Scanner en espera · Inicie la sesión para comenzar a registrar.</span>
+            </div>
+        </div>
+
+        <!-- Right Column: Settings, Metrics and logs -->
+        <div class="sidebar">
+            
+            <!-- Session Configurations -->
+            <div class="config-card">
+                <div class="form-group">
+                    <label for="select-materia">Materia / Clase</label>
+                    <select id="select-materia" class="select-input">
+                        <option value="">Cargando materias...</option>
+                    </select>
+                </div>
+                
+                <div class="grid-inputs">
+                    <div class="form-group">
+                        <label for="input-presente">Presente (Min)</label>
+                        <input type="number" id="input-presente" class="text-input" value="5" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="input-tarde">Retardo (Min)</label>
+                        <input type="number" id="input-tarde" class="text-input" value="20" min="0">
+                    </div>
+                </div>
+                
+                <button id="btn-session" class="btn-control">
+                    <i data-lucide="play" style="width: 18px; height: 18px;"></i>
+                    <span>Iniciar clase</span>
+                </button>
+            </div>
+
+            <!-- Real-time Metrics -->
+            <div class="metrics-grid">
+                <div class="metric-box present">
+                    <div class="metric-value" id="metric-p">0</div>
+                    <div class="metric-label">Presentes</div>
+                </div>
+                <div class="metric-box late">
+                    <div class="metric-value" id="metric-t">0</div>
+                    <div class="metric-label">Retardos</div>
+                </div>
+                <div class="metric-box absent">
+                    <div class="metric-value" id="metric-a">0</div>
+                    <div class="metric-label">Ausentes</div>
+                </div>
+            </div>
+
+            <!-- Attendance Register -->
+            <div class="list-card">
+                <div class="card-header">
+                    <span class="card-title" style="color: #818cf8;">
+                        <i data-lucide="users" style="width: 16px; height: 16px;"></i>
+                        Registro en Tiempo Real
+                    </span>
+                </div>
+                <div class="table-container" id="attendance-list">
+                    <!-- Rows will be injected dynamically -->
+                </div>
+            </div>
+
+            <!-- Audit Console -->
+            <div class="console-card">
+                <div class="form-group" style="margin-bottom: 6px;">
+                    <label style="font-size: 10px;">Consola de Auditoría</label>
+                </div>
+                <div class="console-output" id="console-log">
+                    Listo para abrir sesión de asistencia.
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Script de lógica Frontend -->
+    <script>
+        // Inicializar iconos
+        lucide.createIcons();
+
+        // Elementos DOM
+        const btnSession = document.getElementById('btn-session');
+        const selectMateria = document.getElementById('select-materia');
+        const inputPresente = document.getElementById('input-presente');
+        const inputTarde = document.getElementById('input-tarde');
+        const sessionBadge = document.getElementById('session-status-badge');
+        const sessionText = document.getElementById('session-status-text');
+        const video = document.getElementById('camera-video');
+        const canvas = document.getElementById('camera-canvas');
+        const placeholder = document.getElementById('placeholder-box');
+        const viewport = document.getElementById('viewport-container');
+        const banner = document.getElementById('banner-estado');
+        const bannerText = document.getElementById('banner-texto');
+        const listContainer = document.getElementById('attendance-list');
+        const consoleLog = document.getElementById('console-log');
+        
+        const metricP = document.getElementById('metric-p');
+        const metricT = document.getElementById('metric-t');
+        const metricA = document.getElementById('metric-a');
+
+        let isSessionActive = false;
+        let localStream = null;
+        let scanInterval = null;
+        let detectedCooldown = {}; // Evita duplicar peticiones en milisegundos
+
+        // Cargar materias al iniciar
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch('/api/clases');
+                const data = await res.json();
+                selectMateria.innerHTML = '';
+                if(data.length === 0) {
+                    selectMateria.innerHTML = '<option value="">No hay clases configuradas</option>';
+                    return;
+                }
+                data.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = `${c.nombre_materia} (${c.hora_inicio})`;
+                    selectMateria.appendChild(opt);
+                });
+            } catch(e) {
+                addLog('Error al conectar con la API de clases.');
+            }
+        });
+
+        function addLog(msg) {
+            const time = new Date().toLocaleTimeString();
+            consoleLog.textContent += `\n[${time}] ${msg}`;
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        // Toggle Session
+        btnSession.addEventListener('click', async () => {
+            if(!isSessionActive) {
+                // Iniciar clase
+                const id_clase = selectMateria.value;
+                if(!id_clase) {
+                    alert('Seleccione una materia válida.');
+                    return;
+                }
+                const limite_pres = parseInt(inputPresente.value) || 5;
+                const limite_tarde = parseInt(inputTarde.value) || 20;
+
+                try {
+                    const res = await fetch('/api/session/start', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            clase_config_id: parseInt(id_clase),
+                            limite_presente: limite_pres,
+                            limite_tarde: limite_tarde
+                        })
+                    });
+                    const r = await res.json();
+                    if(r.status === 'ok') {
+                        isSessionActive = true;
+                        updateUIActive(true, r.session_id, selectMateria.options[selectMateria.selectedIndex].text);
+                        await startCamera();
+                    } else {
+                        addLog(`Error al iniciar clase: ${r.message}`);
+                    }
+                } catch(e) {
+                    addLog('Error en la petición de inicio de sesión.');
+                }
+            } else {
+                // Finalizar clase
+                try {
+                    const res = await fetch('/api/session/stop', { method: 'POST' });
+                    const r = await res.json();
+                    if(r.status === 'ok') {
+                        isSessionActive = false;
+                        updateUIActive(false);
+                        stopCamera();
+                        addLog(`Reportes generados en backend.`);
+                        alert('Clase finalizada con éxito. Reportes guardados y enviados a Telegram.');
+                    }
+                } catch(e) {
+                    addLog('Error al finalizar la clase.');
+                }
+            }
+        });
+
+        function updateUIActive(active, sessionId = null, label = '') {
+            if(active) {
+                btnSession.innerHTML = '<i class="lucide-square" style="width: 18px; height: 18px;"></i> <span>Finalizar clase</span>';
+                btnSession.className = 'btn-control active';
+                sessionBadge.className = 'session-status active';
+                sessionText.textContent = 'CLASE EN CURSO';
+                selectMateria.disabled = true;
+                inputPresente.disabled = true;
+                inputTarde.disabled = true;
+                
+                banner.className = 'status-banner active';
+                bannerText.textContent = 'Cámara web activa — acerque su rostro o código QR.';
+                addLog(`Clase "${label}" iniciada con Sesión #${sessionId}`);
+                
+                // Limpiar lista
+                listContainer.innerHTML = '';
+            } else {
+                btnSession.innerHTML = '<i class="lucide-play" style="width: 18px; height: 18px;"></i> <span>Iniciar clase</span>';
+                btnSession.className = 'btn-control';
+                sessionBadge.className = 'session-status';
+                sessionText.textContent = 'SESIÓN CERRADA';
+                selectMateria.disabled = false;
+                inputPresente.disabled = false;
+                inputTarde.disabled = false;
+                
+                banner.className = 'status-banner';
+                bannerText.textContent = 'Scanner en espera · Inicie la sesión para comenzar a registrar.';
+                addLog(`Sesión de clase cerrada.`);
+            }
+            lucide.createIcons();
+        }
+
+        async function startCamera() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480 }
+                });
+                video.srcObject = localStream;
+                video.style.display = 'block';
+                placeholder.style.display = 'none';
+                viewport.classList.add('active');
+
+                // Iniciar proceso de envío de fotogramas (cada 250ms -> 4 FPS)
+                scanInterval = setInterval(sendFrameToBackend, 250);
+            } catch(err) {
+                addLog('No se pudo acceder a la cámara: ' + err.message);
+                alert('Error al acceder a la cámara. Asegúrese de otorgar permisos.');
+                isSessionActive = false;
+                updateUIActive(false);
+            }
+        }
+
+        function stopCamera() {
+            if(localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            clearInterval(scanInterval);
+            video.style.display = 'none';
+            placeholder.style.display = 'flex';
+            viewport.classList.remove('active');
+        }
+
+        async function sendFrameToBackend() {
+            if(!isSessionActive || !localStream) return;
+
+            // Dibujar frame en canvas oculto
+            const context = canvas.getContext('2d');
+            canvas.width = 640;
+            canvas.height = 480;
+            
+            // Espejar para procesar como lo ve el docente
+            context.translate(canvas.width, 0);
+            context.scale(-1, 1);
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Convertir a base64 png/jpeg
+            const base64Image = canvas.toDataURL('image/jpeg', 0.85);
+
+            try {
+                const response = await fetch('/api/scan', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ image: base64Image })
+                });
+                const r = await response.json();
+                
+                if (r.detected) {
+                    const now = new Date().getTime();
+                    const key = `${r.metodo}_${r.alumno_id || 'unknown'}`;
+                    
+                    // Cooldown local de 3 segundos para alertas
+                    if (!detectedCooldown[key] || (now - detectedCooldown[key] > 3000)) {
+                        detectedCooldown[key] = now;
+                        
+                        if (r.exito) {
+                            addLog(`Detectado: ${r.nombre} (${r.alumno_id}) mediante ${r.metodo}`);
+                            banner.className = 'status-banner active';
+                            bannerText.textContent = `Registrado: ${r.nombre} → ${r.estado}`;
+                            
+                            // Recargar métricas y lista
+                            updateMetrics(r.metrics);
+                            updateTable(r.attendance_list);
+                        } else {
+                            if (r.metodo === 'FACIAL') {
+                                banner.className = 'status-banner unknown';
+                                bannerText.textContent = `Rostro desconocido detectado.`;
+                            } else {
+                                banner.className = 'status-banner';
+                                banner.classList.add('red'); // Estilo error
+                                bannerText.textContent = `Código QR no válido: ${r.mensaje}`;
+                            }
+                        }
+                    }
+                }
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        function updateMetrics(metrics) {
+            if(!metrics) return;
+            metricP.textContent = metrics.presentes;
+            metricT.textContent = metrics.retardos;
+            metricA.textContent = metrics.ausentes;
+        }
+
+        function updateTable(list) {
+            if(!list) return;
+            listContainer.innerHTML = '';
+            list.forEach(item => {
+                const initials = item.nombre.split(' ').slice(0, 2).map(p => p[0].toUpperCase()).join('');
+                
+                const statusClass = item.estado.toLowerCase() === 'presente' ? 'present' : 
+                                    item.estado.toLowerCase() === 'retardo' ? 'late' : 'absent';
+
+                const row = document.createElement('div');
+                row.className = 'table-row';
+                row.innerHTML = `
+                    <div class="student-info">
+                        <div class="avatar ${statusClass}">${initials}</div>
+                        <div class="student-details">
+                            <div class="name">${item.nombre}</div>
+                            <div class="id-code">ID: ${item.alumno_id}</div>
+                        </div>
+                    </div>
+                    <div class="badge-status ${statusClass}">${item.estado}</div>
+                    <div class="time-method">
+                        <div class="time">${item.hora}</div>
+                        <div class="method">${item.metodo}</div>
+                    </div>
+                `;
+                listContainer.appendChild(row);
+            });
+        }
+    </script>
+</body>
+</html>

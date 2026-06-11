@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REC — Enrolamiento Biométrico</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- QRCodeJS Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0d0d14;
+            --surface: #12121e;
+            --surface-hover: #1a1a2e;
+            --border: #1e1e35;
+            --border-hover: #2d2d4d;
+            --accent: #6d28d9;
+            --accent-hover: #7c3aed;
+            --accent-soft: rgba(109, 40, 217, 0.15);
+            --text: #e2e8f0;
+            --muted: #6b7280;
+            --green: #22c55e;
+            --green-bg: rgba(34, 197, 94, 0.15);
+            --yellow: #f59e0b;
+            --yellow-bg: rgba(245, 158, 11, 0.15);
+            --red: #ef4444;
+            --red-bg: rgba(239, 68, 68, 0.15);
+            --blue: #3b82f6;
+            --blue-bg: rgba(59, 130, 246, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(109, 40, 217, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.05) 0px, transparent 50%);
+        }
+
+        /* Top Bar */
+        .topbar {
+            height: 70px;
+            background-color: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-badge {
+            background-color: var(--accent);
+            color: white;
+            font-weight: 800;
+            font-size: 14px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 12px rgba(109, 40, 217, 0.3);
+        }
+
+        .logo-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .logo-subtitle {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: -2px;
+        }
+
+        /* Navbar links styling */
+        .nav-links {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 13.5px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--text);
+            background-color: var(--surface-hover);
+        }
+
+        .nav-link.active {
+            color: white;
+            background-color: var(--accent);
+            box-shadow: 0 4px 12px rgba(109, 40, 217, 0.25);
+        }
+
+        /* Main Container */
+        .main-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 7fr 5fr;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Left Column - Camera Card */
+        .camera-card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .camera-viewport {
+            flex: 1;
+            background-color: #08080f;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+        }
+
+        #camera-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Espejar */
+        }
+
+        #camera-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* Right Column - Form */
+        .form-card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .text-input {
+            width: 100%;
+            background-color: var(--surface-hover);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            padding: 12px 16px;
+            font-size: 13.5px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .text-input:focus {
+            border-color: var(--accent);
+        }
+
+        .status-banner {
+            padding: 14px;
+            background-color: var(--yellow-bg);
+            border: 1px solid var(--yellow);
+            color: var(--yellow);
+            border-radius: 10px;
+            font-size: 12.5px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .status-banner.success {
+            background-color: var(--green-bg);
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        .status-banner.error {
+            background-color: var(--red-bg);
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        .btn-submit {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(109, 40, 217, 0.3);
+        }
+
+        .btn-submit:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        /* Success Result Section */
+        .result-section {
+            background-color: rgba(34, 197, 94, 0.05);
+            border: 1px dashed var(--green);
+            border-radius: 12px;
+            padding: 20px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            text-align: center;
+        }
+
+        .qrcode-container {
+            background-color: white;
+            padding: 12px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .seed-display {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            padding: 10px 14px;
+            border-radius: 8px;
+            color: var(--green);
+            font-size: 12.5px;
+            width: 100%;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation Bar -->
+    <div class="topbar">
+        <div class="logo-section">
+            <span class="logo-badge">REC</span>
+            <div>
+                <h1 class="logo-title">Enrolamiento</h1>
+                <p class="logo-subtitle">Registro de firmas biométricas y TOTP</p>
+            </div>
+        </div>
+        
+        <nav class="nav-links">
+            <a href="/" class="nav-link"><i data-lucide="layout-dashboard" style="width: 16px; height: 16px;"></i> Asistencia</a>
+            <a href="/enroll" class="nav-link active"><i data-lucide="user-plus" style="width: 16px; height: 16px;"></i> Enrolar Alumno</a>
+            <a href="/student" class="nav-link"><i data-lucide="qr-code" style="width: 16px; height: 16px;"></i> App Alumno (QR)</a>
+        </nav>
+
+        <div style="width: 140px;"></div> <!-- Spacer para alinear con index.html -->
+    </div>
+
+    <!-- Main Grid -->
+    <div class="main-container">
+        
+        <!-- Video view -->
+        <div class="camera-card">
+            <div class="card-header">
+                <span class="card-title">
+                    <i data-lucide="video" style="width: 16px; height: 16px;"></i>
+                    Encuadre del Estudiante
+                </span>
+            </div>
+            <div class="camera-viewport">
+                <video id="camera-video" autoplay playsinline></video>
+                <canvas id="camera-canvas"></canvas>
+            </div>
+        </div>
+
+        <!-- Form fields -->
+        <div class="form-card">
+            <div>
+                <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">Registro Biométrico</h2>
+                <p style="color: var(--muted); font-size: 12.5px;">El rostro debe estar descubierto, bien iluminado y sin lentes.</p>
+            </div>
+
+            <div class="form-group">
+                <label for="input-id">Matrícula / Código Único</label>
+                <input type="text" id="input-id" class="text-input" placeholder="Ej: 20230045">
+            </div>
+
+            <div class="form-group">
+                <label for="input-name">Nombre Completo</label>
+                <input type="text" id="input-name" class="text-input" placeholder="Ej: Juan Pérez">
+            </div>
+
+            <div class="status-banner" id="status-label">
+                Buscando rostro en escena...
+            </div>
+
+            <button id="btn-capture" class="btn-submit">
+                <i data-lucide="camera" style="width: 18px; height: 18px;"></i>
+                <span>Capturar Firma y Guardar</span>
+            </button>
+
+            <!-- Result Box -->
+            <div class="result-section" id="result-box">
+                <div style="color: var(--green); font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i>
+                    ¡Registro Exitoso!
+                </div>
+                <p style="font-size: 12px; color: var(--muted);">Escanee el código QR o copie la semilla TOTP en la app del estudiante:</p>
+                <div class="qrcode-container">
+                    <div id="qrcode"></div>
+                </div>
+                <div class="seed-display" id="seed-code">
+                    SEMILLA
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const video = document.getElementById('camera-video');
+        const canvas = document.getElementById('camera-canvas');
+        const inputId = document.getElementById('input-id');
+        const inputName = document.getElementById('input-name');
+        const statusLabel = document.getElementById('status-label');
+        const btnCapture = document.getElementById('btn-capture');
+        const resultBox = document.getElementById('result-box');
+        const seedCode = document.getElementById('seed-code');
+        const qrcodeDiv = document.getElementById('qrcode');
+
+        let localStream = null;
+        let scanInterval = null;
+        let currentBox = null;
+        let isRegistered = false;
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            await startCamera();
+        });
+
+        async function startCamera() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480 }
+                });
+                video.srcObject = localStream;
+                scanInterval = setInterval(scanFaceLocation, 250);
+            } catch(e) {
+                statusLabel.className = 'status-banner error';
+                statusLabel.textContent = 'Error al acceder a la cámara.';
+                alert('No se pudo acceder a la cámara.');
+            }
+        }
+
+        // Dibuja el cuadro de la cara
+        function scanFaceLocation() {
+            if(!localStream || isRegistered) return;
+
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+
+            // Dibujar canvas oculto para codificar
+            const captureCanvas = document.createElement('canvas');
+            captureCanvas.width = 640;
+            captureCanvas.height = 480;
+            const captureContext = captureCanvas.getContext('2d');
+            captureContext.translate(captureCanvas.width, 0);
+            captureContext.scale(-1, 1);
+            captureContext.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+            
+            const base64Image = captureCanvas.toDataURL('image/jpeg', 0.85);
+
+            fetch('/api/enroll/scan', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ image: base64Image })
+            })
+            .then(res => res.json())
+            .then(data => {
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                if (data.detected) {
+                    currentBox = data.box; // [x, y, w, h]
+                    statusLabel.className = 'status-banner success';
+                    statusLabel.textContent = 'Rostro detectado · Listo para registrar';
+
+                    // Dibujar rectángulo
+                    // Nota: el video está espejado por CSS para comodidad, pero el canvas tiene posición absoluta.
+                    // Para alinearlo con el video espejado:
+                    const [x, y, w, h] = currentBox;
+                    const mirroredX = canvas.width - x - w;
+                    
+                    context.strokeStyle = '#22c55e';
+                    context.lineWidth = 3;
+                    context.strokeRect(mirroredX, y, w, h);
+                } else {
+                    currentBox = null;
+                    statusLabel.className = 'status-banner';
+                    statusLabel.textContent = 'Buscando rostro en escena (sin gorras ni lentes)...';
+                }
+            })
+            .catch(err => console.error(err));
+        }
+
+        // Enviar captura para guardar
+        btnCapture.addEventListener('click', async () => {
+            const id = inputId.value.trim();
+            const name = inputName.value.trim();
+
+            if(!id || !name) {
+                alert('El ID y el Nombre son requeridos.');
+                return;
+            }
+
+            if(!currentBox) {
+                alert('Debe detectarse un rostro en la cámara antes de registrar.');
+                return;
+            }
+
+            // Capturar frame final
+            const captureCanvas = document.createElement('canvas');
+            captureCanvas.width = 640;
+            captureCanvas.height = 480;
+            const captureContext = captureCanvas.getContext('2d');
+            captureContext.translate(captureCanvas.width, 0);
+            captureContext.scale(-1, 1);
+            captureContext.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+            const base64Image = captureCanvas.toDataURL('image/jpeg', 0.9);
+
+            try {
+                btnCapture.disabled = true;
+                btnCapture.textContent = 'Procesando...';
+                
+                const res = await fetch('/api/enroll/save', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        alumno_id: id,
+                        nombre: name,
+                        image: base64Image
+                    })
+                });
+                const r = await res.json();
+                
+                if (r.status === 'ok') {
+                    isRegistered = true;
+                    clearInterval(scanInterval);
+                    
+                    // Mostrar resultados
+                    statusLabel.className = 'status-banner success';
+                    statusLabel.textContent = '¡Estudiante Registrado con Éxito!';
+                    btnCapture.style.display = 'none';
+                    
+                    seedCode.textContent = r.totp_secret;
+                    
+                    // Generar QR
+                    qrcodeDiv.innerHTML = '';
+                    new QRCode(qrcodeDiv, {
+                        text: r.uri,
+                        width: 180,
+                        height: 180,
+                        colorDark : "#0d0d14",
+                        colorLight : "#ffffff"
+                    });
+                    
+                    resultBox.style.display = 'flex';
+                } else {
+                    btnCapture.disabled = false;
+                    btnCapture.innerHTML = '<i data-lucide="camera" style="width: 18px; height: 18px;"></i> <span>Capturar Firma y Guardar</span>';
+                    lucide.createIcons();
+                    alert('Error al registrar: ' + r.message);
+                }
+            } catch(e) {
+                btnCapture.disabled = false;
+                btnCapture.innerHTML = '<i data-lucide="camera" style="width: 18px; height: 18px;"></i> <span>Capturar Firma y Guardar</span>';
+                lucide.createIcons();
+                alert('Ocurrió un error al conectar con el servidor.');
+            }
+        });
+    </script>
+</body>
+</html>

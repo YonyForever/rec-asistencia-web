@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REC — QR de Contingencia Dinámico</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- OTPAuth and QRCodeJS CDNs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/otpauth/9.1.2/otpauth.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(20, 30, 55, 0.6);
+            --primary: #00f0ff;
+            --primary-glow: rgba(0, 240, 255, 0.4);
+            --secondary: #ff007f;
+            --secondary-glow: rgba(255, 0, 127, 0.4);
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            --success: #10b981;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 10% 20%, rgba(255, 0, 127, 0.08) 0px, transparent 50%),
+                radial-gradient(at 90% 80%, rgba(0, 240, 255, 0.08) 0px, transparent 50%);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* Top Bar */
+        .topbar {
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-badge {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-weight: 800;
+            font-size: 11px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .back-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+        }
+
+        .back-btn:hover {
+            color: white;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+            perspective: 1000px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        /* Form groups */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(10, 15, 30, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary), #0077ff);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 119, 255, 0.4);
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 240, 255, 0.5);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            margin-top: 15px;
+            box-shadow: none;
+            color: var(--text-muted);
+        }
+
+        .btn-secondary:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* QR Screen */
+        .qr-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .qr-outer-container {
+            position: relative;
+            padding: 15px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+            margin-bottom: 25px;
+            display: inline-block;
+        }
+
+        .student-info {
+            margin-bottom: 15px;
+        }
+
+        .student-info h2 {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .student-info p {
+            color: var(--primary);
+            font-size: 0.95rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+
+        .timer-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 15px;
+            gap: 10px;
+        }
+
+        .countdown-circle {
+            position: relative;
+            width: 50px;
+            height: 50px;
+        }
+
+        .countdown-circle svg {
+            width: 50px;
+            height: 50px;
+            transform: rotate(-90deg);
+        }
+
+        .countdown-circle circle {
+            fill: none;
+            stroke-width: 4px;
+        }
+
+        .countdown-circle .bg-ring {
+            stroke: rgba(255, 255, 255, 0.08);
+        }
+
+        .countdown-circle .progress-ring {
+            stroke: var(--primary);
+            stroke-dasharray: 126; /* 2 * pi * r (r=20) = 125.6 */
+            stroke-dashoffset: 0;
+            transition: stroke-dashoffset 0.1s linear;
+        }
+
+        .countdown-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .code-display {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: 4px;
+            background: linear-gradient(135deg, white, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 5px 0;
+        }
+
+        .alert-bar {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--success);
+            color: var(--success);
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .slide-up {
+            animation: slideUp 0.5s ease-out forwards;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation bar optimized for Mobile -->
+    <div class="topbar">
+        <div class="logo-section">
+            <span class="logo-badge">REC</span>
+            <span style="font-size: 12px; font-weight: 600;">App Alumno</span>
+        </div>
+        <a href="/" class="back-btn">
+            <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i>
+            <span>Volver</span>
+        </a>
+    </div>
+
+    <div class="container">
+        <!-- Configuration Card -->
+        <div id="setup-card" class="card slide-up">
+            <div class="header">
+                <h1>REC Asistencia</h1>
+                <p>Configuración del QR Dinámico</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="uri-input">Pegar Enlace / URI de Enrolamiento</label>
+                <input type="text" id="uri-input" placeholder="otpauth://totp/REC-Asistencia:...">
+            </div>
+            
+            <div style="text-align: center; margin: 15px 0; color: var(--text-muted); font-size: 0.85rem;">
+                — O MANUALMENTE —
+            </div>
+            
+            <div class="form-group">
+                <label for="student-id">Código de Alumno</label>
+                <input type="text" id="student-id" placeholder="ej: 20230045">
+            </div>
+            
+            <div class="form-group">
+                <label for="student-name">Nombre completo</label>
+                <input type="text" id="student-name" placeholder="ej: Juan Pérez">
+            </div>
+            
+            <div class="form-group">
+                <label for="secret-key">Clave Secreta Base32</label>
+                <input type="text" id="secret-key" placeholder="Pegar semilla de enrolamiento">
+            </div>
+            
+            <button id="btn-save" class="btn">Guardar y Generar QR</button>
+        </div>
+
+        <!-- Dynamic QR Card -->
+        <div id="qr-card" class="card qr-screen">
+            <div class="alert-bar" id="alert-text">
+                QR Activo: Válido por 60 segundos
+            </div>
+            
+            <div class="student-info">
+                <h2 id="disp-name">Nombre Estudiante</h2>
+                <p id="disp-id">ID: 00000000</p>
+            </div>
+            
+            <div class="qr-outer-container">
+                <div id="qrcode"></div>
+            </div>
+            
+            <div>
+                <p style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Token TOTP Actual</p>
+                <div id="totp-code" class="code-display">000 000</div>
+            </div>
+            
+            <div class="timer-container">
+                <div class="countdown-circle">
+                    <svg>
+                        <circle class="bg-ring" cx="25" cy="25" r="20"></circle>
+                        <circle id="progress-bar" class="progress-ring" cx="25" cy="25" r="20"></circle>
+                    </svg>
+                    <div id="seconds-text" class="countdown-text">60</div>
+                </div>
+                <div style="text-align: left;">
+                    <p style="font-size: 0.85rem; font-weight: 600;">Sincronizado</p>
+                    <p style="font-size: 0.75rem; color: var(--text-muted);">El QR cambia automáticamente</p>
+                </div>
+            </div>
+            
+            <button id="btn-edit" class="btn btn-secondary">Editar Configuración</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const setupCard = document.getElementById("setup-card");
+        const qrCard = document.getElementById("qr-card");
+        const qrcodeEl = document.getElementById("qrcode");
+        
+        let qrcodeInstance = null;
+        let totpTimer = null;
+        let activeSecret = "";
+        let activeId = "";
+        let activeName = "";
+        const interval = 60; // 60 segundos por regla de negocio
+
+        // Cargar datos del almacenamiento local si existen
+        window.addEventListener("load", () => {
+            const savedId = localStorage.getItem("rec_student_id");
+            const savedSecret = localStorage.getItem("rec_student_secret");
+            const savedName = localStorage.getItem("rec_student_name") || "Estudiante REC";
+            
+            if (savedId && savedSecret) {
+                activeId = savedId;
+                activeSecret = savedSecret.replace(/\s+/g, '').toUpperCase();
+                activeName = savedName;
+                startQRMode();
+            }
+        });
+
+        // Evento pegar URI
+        document.getElementById("uri-input").addEventListener("input", (e) => {
+            const val = e.target.value.trim();
+            if (val.startsWith("otpauth://totp/")) {
+                try {
+                    const url = new URL(val);
+                    const secret = url.searchParams.get("secret");
+                    if (secret) {
+                        document.getElementById("secret-key").value = secret;
+                    }
+                    
+                    let path = decodeURIComponent(url.pathname);
+                    path = path.replace(/^\/\//, ''); // Quitar barras
+                    path = path.substring(path.indexOf(':') + 1); // Quitar prefijo del emisor
+                    document.getElementById("student-id").value = path;
+                    
+                    document.getElementById("student-name").value = "Estudiante Registrado";
+                } catch (err) {
+                    alert("No se pudo parsear el enlace de enrolamiento automáticamente.");
+                }
+            }
+        });
+
+        // Guardar configuración
+        document.getElementById("btn-save").addEventListener("click", () => {
+            const id = document.getElementById("student-id").value.trim();
+            const name = document.getElementById("student-name").value.trim() || "Estudiante REC";
+            const secret = document.getElementById("secret-key").value.trim().replace(/\s+/g, '').toUpperCase();
+            
+            if (!id || !secret) {
+                alert("El código del alumno y la semilla secreta son obligatorios.");
+                return;
+            }
+            
+            if (!/^[A-Z2-7]+=*$/.test(secret)) {
+                alert("La semilla secreta no parece ser una clave Base32 válida.");
+                return;
+            }
+            
+            localStorage.setItem("rec_student_id", id);
+            localStorage.setItem("rec_student_name", name);
+            localStorage.setItem("rec_student_secret", secret);
+            
+            activeId = id;
+            activeName = name;
+            activeSecret = secret;
+            
+            startQRMode();
+        });
+
+        // Volver al modo configuración
+        document.getElementById("btn-edit").addEventListener("click", () => {
+            clearInterval(totpTimer);
+            setupCard.style.display = "block";
+            qrCard.style.display = "none";
+            
+            document.getElementById("student-id").value = activeId;
+            document.getElementById("student-name").value = activeName;
+            document.getElementById("secret-key").value = activeSecret;
+        });
+
+        function startQRMode() {
+            setupCard.style.display = "none";
+            qrCard.style.display = "flex";
+            qrCard.classList.add("slide-up");
+            
+            document.getElementById("disp-name").textContent = activeName;
+            document.getElementById("disp-id").textContent = `ID: ${activeId}`;
+            
+            // Re-instanciar QR
+            qrcodeEl.innerHTML = "";
+            qrcodeInstance = new QRCode(qrcodeEl, {
+                text: "INIT",
+                width: 200,
+                height: 200,
+                colorDark : "#0b0f19",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.M
+            });
+            
+            updateDynamicQR();
+            totpTimer = setInterval(updateDynamicQR, 100);
+        }
+
+        function updateDynamicQR() {
+            try {
+                // Instanciar OTP
+                const totp = new OTPAuth.TOTP({
+                    algorithm: 'SHA1',
+                    digits: 6,
+                    period: interval,
+                    secret: OTPAuth.Secret.fromBase32(activeSecret)
+                });
+
+                const token = totp.generate();
+                const formattedToken = token.slice(0, 3) + " " + token.slice(3);
+                document.getElementById("totp-code").textContent = formattedToken;
+                
+                const qrContent = `${activeId}:${token}`;
+                
+                if (qrcodeEl.getAttribute("data-token") !== token) {
+                    qrcodeEl.setAttribute("data-token", token);
+                    qrcodeInstance.clear();
+                    qrcodeInstance.makeCode(qrContent);
+                }
+                
+                // Cuenta regresiva
+                const epoch = Math.round(new Date().getTime() / 1000);
+                const secondsRemaining = interval - (epoch % interval);
+                
+                document.getElementById("seconds-text").textContent = secondsRemaining;
+                document.getElementById("alert-text").textContent = `QR Activo: Válido por ${secondsRemaining} segundos`;
+                
+                const percent = (secondsRemaining / interval);
+                const offset = 126 * (1 - percent);
+                document.getElementById("progress-bar").style.strokeDashoffset = offset;
+                
+            } catch (err) {
+                console.error(err);
+                document.getElementById("totp-code").textContent = "ERROR SEC";
+                clearInterval(totpTimer);
+            }
+        }
+    </script>
+</body>
+</html>
