@@ -28,9 +28,9 @@ from core.config import (
 )
 from core.face_engine import FaceEngine
 from core.qr_engine import QREngine
+from core.model_loader import ensure_models_exist  # <--- AGREGA ESTA LÍNEA
 from database.connection import get_session, init_db
 from database.models import Alumno, ClaseConfig, Sesion, Asistencia
-
 # Inicializar Base de Datos y Motores
 init_db()
 face_engine = FaceEngine()
