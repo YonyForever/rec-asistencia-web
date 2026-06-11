@@ -28,11 +28,17 @@ from core.config import (
 )
 from core.face_engine import FaceEngine
 from core.qr_engine import QREngine
-from core.model_loader import ensure_models_exist  # <--- AGREGA ESTA LÍNEA
+from core.model_loader import ensure_models_exist  # Importación del descargador
 from database.connection import get_session, init_db
 from database.models import Alumno, ClaseConfig, Sesion, Asistencia
-# Inicializar Base de Datos y Motores
+
+# 1. Inicializar la Base de Datos primero
 init_db()
+
+# 2. Descargar o verificar los modelos de IA antes de que falle OpenCV
+ensure_models_exist()  # <--- ¡AQUÍ SE EJECUTA LA DESCARGA AUTOMÁTICA!
+
+# 3. Ahora que los archivos ONNX existen, ya puedes iniciar los motores sin errores
 face_engine = FaceEngine()
 face_engine.reload_students_cache()
 qr_engine = QREngine()
