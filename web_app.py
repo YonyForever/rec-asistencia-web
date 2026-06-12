@@ -37,19 +37,47 @@ from database.models import Alumno, ClaseConfig, Sesion, Asistencia
 face_engine = None
 qr_engine = None
 
+def seed_clases():
+    """Inserta materias de ejemplo si la tabla está vacía (primer despliegue)."""
+    session = get_session()
+    try:
+        count = session.query(ClaseConfig).count()
+        if count == 0:
+            clases_ejemplo = [
+                ClaseConfig(nombre_materia="Gestión de Proyectos", hora_inicio="08:00", limite_presente=5, limite_tarde=20, activo=1),
+                ClaseConfig(nombre_materia="Base de Datos", hora_inicio="10:00", limite_presente=5, limite_tarde=20, activo=1),
+                ClaseConfig(nombre_materia="Programación Web", hora_inicio="12:00", limite_presente=5, limite_tarde=20, activo=1),
+                ClaseConfig(nombre_materia="Redes y Comunicaciones", hora_inicio="14:00", limite_presente=5, limite_tarde=20, activo=1),
+                ClaseConfig(nombre_materia="Inteligencia Artificial", hora_inicio="16:00", limite_presente=5, limite_tarde=20, activo=1),
+            ]
+            session.add_all(clases_ejemplo)
+            session.commit()
+            print("[Seed] 5 materias de ejemplo insertadas en la BD.")
+        else:
+            print(f"[Seed] Ya existen {count} materias. No se insertaron datos semilla.")
+    except Exception as e:
+        session.rollback()
+        print(f"[Seed ERROR] {e}")
+    finally:
+        session.close()
+
+
 # Definir el ciclo de vida de la aplicación para entornos Cloud (Render)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global face_engine, qr_engine
     print("[Lifespan] Iniciando secuencia de arranque en el servidor...")
     
-    # 1. Inicializar la Base de Datos
+    # 1. Inicializar la Base de Datos (crear tablas)
     init_db()
     
-    # 2. Descargar modelos de IA de forma segura (Render no cortará la conexión aquí)
+    # 2. Sembrar datos iniciales si la BD está vacía
+    seed_clases()
+    
+    # 3. Descargar modelos de IA de forma segura (Render no cortará la conexión aquí)
     ensure_models_exist()
     
-    # 3. Instanciar motores una vez descargados los archivos ONNX
+    # 4. Instanciar motores una vez descargados los archivos ONNX
     face_engine = FaceEngine()
     face_engine.reload_students_cache()
     qr_engine = QREngine()
@@ -84,6 +112,12 @@ class EnrollSaveRequest(BaseModel):
     alumno_id: str
     nombre: str
     image: str
+
+class CreateClassRequest(BaseModel):
+    nombre_materia: str
+    hora_inicio: str
+    limite_presente: int = 5
+    limite_tarde: int = 20
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -202,6 +236,46 @@ def get_clases():
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        session.close()
+
+
+@app.post("/api/clases")
+def create_clase(req: CreateClassRequest):
+    """Crea una nueva materia/clase en la BD."""
+    session = get_session()
+    try:
+        nueva = ClaseConfig(
+            nombre_materia=req.nombre_materia.strip(),
+            hora_inicio=req.hora_inicio.strip(),
+            limite_presente=req.limite_presente,
+            limite_tarde=req.limite_tarde,
+            activo=1
+        )
+        session.add(nueva)
+        session.commit()
+        return {"status": "ok", "id": nueva.id, "nombre_materia": nueva.nombre_materia}
+    except Exception as e:
+        session.rollback()
+        return {"status": "error", "message": str(e)}
+    finally:
+        session.close()
+
+
+@app.delete("/api/clases/{clase_id}")
+def delete_clase(clase_id: int):
+    """Desactiva (soft delete) una materia."""
+    session = get_session()
+    try:
+        clase = session.query(ClaseConfig).filter_by(id=clase_id).first()
+        if not clase:
+            return {"status": "error", "message": "Clase no encontrada."}
+        clase.activo = 0
+        session.commit()
+        return {"status": "ok"}
+    except Exception as e:
+        session.rollback()
+        return {"status": "error", "message": str(e)}
     finally:
         session.close()
 
