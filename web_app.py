@@ -282,36 +282,58 @@ def delete_clase(clase_id: int):
 
 @app.post("/api/session/start")
 def start_session(req: StartSessionRequest):
-    """Inicia una sesión de asistencia para una clase seleccionada."""
-    global active_session_id, active_class_name, hora_apertura, local_limite_presente, local_limite_tarde, session_active
-    
+    global active_session_id, active_class_name, hora_apertura, session_active
+    global local_limite_presente, local_limite_tarde
+
+    # 🔄 ¡AUTOREPARACIÓN! Si ya hay una sesión activa, la cerramos automáticamente antes de abrir la nueva
     if session_active:
-        return {"status": "error", "message": "Ya hay una sesión activa."}
+        print("[SISTEMA] Detectada sesión antigua colgada. Forzando cierre automático...")
+        try:
+            # Reutiliza tu lógica existente de guardado o simplemente resetea el estado
+            session = get_session()
+            sesion_antigua = session.query(Sesion).filter_by(id=active_session_id).first()
+            if sesion_antigua and sesion_antigua.hora_fin is None:
+                sesion_antigua.hora_fin = datetime.datetime.now().time().strftime("%H:%M:%S")
+                session.commit()
+            session.close()
+        except Exception as e:
+            print(f"[ALERTA] No se pudo cerrar la sesión anterior limpiamente en BD: {e}")
+        
+        # Reseteamos las variables para limpiar la memoria RAM
+        session_active = False
 
+    # ── Ahora el flujo continúa normalmente sin trabarse ───────────────────
     session = get_session()
-    try:
-        clase = session.query(ClaseConfig).filter_by(id=req.clase_config_id).first()
-        if not clase:
-            return {"status": "error", "message": "Clase no encontrada."}
-
-        nueva_sesion = Sesion(clase_config_id=clase.id, estado="ABIERTA")
-        session.add(nueva_sesion)
-        session.commit()
-
-        active_session_id = nueva_sesion.id
-        active_class_name = clase.nombre_materia
-        hora_apertura = datetime.datetime.now()
-        local_limite_presente = req.limite_presente
-        local_limite_tarde = req.limite_tarde
-        session_active = True
-
-        return {"status": "ok", "session_id": active_session_id}
-    except Exception as e:
-        session.rollback()
-        return {"status": "error", "message": str(e)}
-    finally:
+    config = session.query(ClaseConfig).filter_by(id=req.clase_config_id, activo=1).first()
+    if not config:
         session.close()
+        raise HTTPException(status_code=404, detail="Configuración de clase no encontrada o inactiva.")
 
+    now = datetime.datetime.now()
+    nueva_sesion = Sesion(
+        clase_config_id=config.id,
+        fecha=now.date(),
+        hora_inicio=now.time().strftime("%H:%M:%S")
+    )
+    session.add(nueva_sesion)
+    session.commit()
+
+    active_session_id = nueva_sesion.id
+    active_class_name = config.nombre_materia
+    hora_apertura = now
+    local_limite_presente = req.limite_presente
+    local_limite_tarde = req.limite_tarde
+    session_active = True
+
+    # Cargar alumnos a la caché del motor de reconocimiento
+    face_engine.reload_students_cache()
+
+    session.close()
+    return {
+        "status": "success",
+        "message": f"Sesión iniciada para {config.nombre_materia}",
+        "session_id": active_session_id
+    }
 
 @app.post("/api/session/stop")
 def stop_session():
