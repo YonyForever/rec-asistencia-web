@@ -12,6 +12,7 @@ import telebot
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
+from contextlib import asynccontextmanager  # <--- IMPORTANTE
 
 try:
     import openpyxl
@@ -28,22 +29,37 @@ from core.config import (
 )
 from core.face_engine import FaceEngine
 from core.qr_engine import QREngine
-from core.model_loader import ensure_models_exist  # Importación del descargador
+from core.model_loader import ensure_models_exist
 from database.connection import get_session, init_db
 from database.models import Alumno, ClaseConfig, Sesion, Asistencia
 
-# 1. Inicializar la Base de Datos primero
-init_db()
+# Variables globales de los motores (se instanciarán al arrancar la app)
+face_engine = None
+qr_engine = None
 
-# 2. Descargar o verificar los modelos de IA antes de que falle OpenCV
-ensure_models_exist()  # <--- ¡AQUÍ SE EJECUTA LA DESCARGA AUTOMÁTICA!
+# Definir el ciclo de vida de la aplicación para entornos Cloud (Render)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global face_engine, qr_engine
+    print("[Lifespan] Iniciando secuencia de arranque en el servidor...")
+    
+    # 1. Inicializar la Base de Datos
+    init_db()
+    
+    # 2. Descargar modelos de IA de forma segura (Render no cortará la conexión aquí)
+    ensure_models_exist()
+    
+    # 3. Instanciar motores una vez descargados los archivos ONNX
+    face_engine = FaceEngine()
+    face_engine.reload_students_cache()
+    qr_engine = QREngine()
+    
+    print("[Lifespan] Motores biométricos listos para operar.")
+    yield
+    print("[Lifespan] Apagando servidor...")
 
-# 3. Ahora que los archivos ONNX existen, ya puedes iniciar los motores sin errores
-face_engine = FaceEngine()
-face_engine.reload_students_cache()
-qr_engine = QREngine()
-
-app = FastAPI(title="REC — API de Asistencia Biométrica")
+# Pasar el lifespan a la instancia de FastAPI
+app = FastAPI(title="REC — API de Asistencia Biométrica", lifespan=lifespan)
 
 # Estado Global de la Sesión Activa
 active_session_id = None
