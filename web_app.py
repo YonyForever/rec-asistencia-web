@@ -292,8 +292,9 @@ def start_session(req: StartSessionRequest):
             # Reutiliza tu lógica existente de guardado o simplemente resetea el estado
             session = get_session()
             sesion_antigua = session.query(Sesion).filter_by(id=active_session_id).first()
-            if sesion_antigua and sesion_antigua.hora_fin is None:
-                sesion_antigua.hora_fin = datetime.datetime.now().time().strftime("%H:%M:%S")
+            if sesion_antigua and sesion_antigua.hora_cierre is None:
+                sesion_antigua.hora_cierre = datetime.datetime.now()
+                sesion_antigua.estado = "CERRADA"
                 session.commit()
             session.close()
         except Exception as e:
@@ -313,7 +314,8 @@ def start_session(req: StartSessionRequest):
     nueva_sesion = Sesion(
         clase_config_id=config.id,
         fecha=now.date(),
-        hora_inicio=now.time().strftime("%H:%M:%S")
+        hora_apertura=now,
+        estado="ABIERTA"
     )
     session.add(nueva_sesion)
     session.commit()
