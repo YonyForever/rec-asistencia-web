@@ -12,6 +12,20 @@ DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DB_PATH}")
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+# Limpiar parámetros de pgbouncer/options conflictivos para psycopg2 (común en Supabase)
+if "?" in DATABASE_URL:
+    import urllib.parse
+    parsed = urllib.parse.urlparse(DATABASE_URL)
+    query_params = urllib.parse.parse_qsl(parsed.query)
+    # Filtrar cualquier parámetro que sea 'options' o contenga 'pgbouncer'
+    filtered_params = [
+        (k, v) for k, v in query_params
+        if k != "options" and "pgbouncer" not in v and "pgbouncer" not in k
+    ]
+    new_query = urllib.parse.urlencode(filtered_params)
+    parsed = parsed._replace(query=new_query)
+    DATABASE_URL = urllib.parse.urlunparse(parsed)
+
 
 # Directorio de Modelos de Inteligencia Artificial (ONNX)
 MODELS_DIR = BASE_DIR / "models"
